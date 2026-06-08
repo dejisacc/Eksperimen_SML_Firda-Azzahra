@@ -1,0 +1,5 @@
+# Ignore temporary files created by VS Code and Python runners
+tempCodeRunnerFile.py
+__pycache__/
+*.pyc
+.DS_Store
