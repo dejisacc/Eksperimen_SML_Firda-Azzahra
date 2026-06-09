@@ -5,14 +5,14 @@ import joblib
 import os
 
 # Fungsi preprocessing lengkap untuk Customer Shopping Dataset (Unsupervised Learning)
-def preprocessing_pipeline(csv_path):
+def preprocessing_pipeline(csv_path, base_dir):
     df = pd.read_csv(csv_path)
 
-    # Membuat direktori untuk menyimpan model preprocessor jika belum ada
-    os.makedirs("preprocessing/model", exist_ok=True)
+    # buat folder 'model' 
+    model_dir = os.path.join(base_dir, "model")
+    os.makedirs(model_dir, exist_ok=True)
 
     # 1. Drop fitur yang tidak digunakan
-    # Customer ID dihilangkan karena hanya merupakan identitas unik dan tidak bermakna untuk klastering
     if 'Customer ID' in df.columns:
         df = df.drop(columns=['Customer ID'], axis=1)
 
@@ -27,15 +27,16 @@ def preprocessing_pipeline(csv_path):
             scaler.fit(data[[feature]])
             data[feature] = scaler.transform(data[[feature]])
             
-            # Format nama file agar aman (menghilangkan spasi dan tanda kurung)
+            # Format nama file agar aman
             safe_name = feature.replace(' ', '_').replace('(', '').replace(')', '')
-            joblib.dump(scaler, f"preprocessing/model/scaler_{safe_name}.joblib")
+            
+            # Simpan tepat ke dalam folder model
+            joblib.dump(scaler, os.path.join(model_dir, f"scaler_{safe_name}.joblib"))
         return data
 
     df = scaling(numerical_columns, df)
 
     # 3. Encoding fitur kategorikal
-    # Mengambil semua kolom yang bertipe 'object' (teks)
     categorical_columns = df.select_dtypes(include=['object']).columns.tolist()
 
     def encoding(features, data):
@@ -46,26 +47,32 @@ def preprocessing_pipeline(csv_path):
             
             # Format nama file agar aman
             safe_name = feature.replace(' ', '_')
-            joblib.dump(encoder, f"preprocessing/model/encoder_{safe_name}.joblib")
+            
+            # Simpan tepat ke dalam folder model
+            joblib.dump(encoder, os.path.join(model_dir, f"encoder_{safe_name}.joblib"))
         return data
 
     df = encoding(categorical_columns, df)
 
-    # Pengembalian full dataset yang sudah siap masuk ke model K-Means
     return df
 
 if __name__ == "__main__":
-    file_dataset = r"C:\Users\LENOVO\Desktop\kulyeahhhhhh\Pijak\MSML_Firda-Azzahra\Eksperimen_SML_Firda-Azzahra\Customer_shopping_dataset\shopping_trends.csv"
-    df_clean = preprocessing_pipeline(file_dataset)
-    print("Bentuk data setelah preprocessing:", df_clean.shape)
-
-    # SIMPAN KE CSV
-    Customer_shopping_preprocessing = "df_clean"
-    os.makedirs(Customer_shopping_preprocessing, exist_ok=True)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     
-    # Simpan file ke dalam folder tersebut
-    Customer_shopping_preprocessing = os.path.join(Customer_shopping_preprocessing, "shopping_trends_preprocessed.csv")
-    df_clean.to_csv(r"C:\Users\LENOVO\Desktop\kulyeahhhhhh\Pijak\MSML_Firda-Azzahra\Eksperimen_SML_Firda-Azzahra\preprocessing\Customer_shopping_preprocessing\shopping_trends_preprocessed.csv", index=False)
+    file_dataset = os.path.abspath(os.path.join(BASE_DIR, "..", "Customer_shopping_dataset", "shopping_trends.csv"))
+    
+    if not os.path.exists(file_dataset):
+        file_dataset = os.path.abspath(os.path.join(BASE_DIR, "..", "shopping_trends.csv"))
 
-    print(f"Bentuk data setelah preprocessing: {df_clean.shape}")
-    print(f"File berhasil disimpan di: {Customer_shopping_preprocessing}")
+    if not os.path.exists(file_dataset):
+        print(f"Peringatan: Dataset tidak ditemukan di rute:\n{file_dataset}")
+    else:
+        print("Memulai proses preprocessing data...")
+        df_clean = preprocessing_pipeline(file_dataset, BASE_DIR)
+
+        # SIMPAN DATA BERSIH KE CSV 
+        lokasi_simpan = os.path.join(BASE_DIR, "shopping_trends_preprocessed.csv")
+        df_clean.to_csv(lokasi_simpan, index=False)
+        
+        print(f"\n[SUKSES] Bentuk data setelah preprocessing: {df_clean.shape}")
+        print(f"Semua file berhasil disimpan dengan rapi di dalam folder:\n{BASE_DIR}")
